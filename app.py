@@ -14,6 +14,7 @@ Run with: python app.py
 """
 
 import logging
+from datetime import date
 from flask import Flask, request, jsonify
 from models import db, Task
 
@@ -85,12 +86,23 @@ def register_routes(app):
         if status not in valid_statuses:
             logger.warning(f"POST /tasks - invalid status '{status}'")
             return jsonify({"error": f"'status' must be one of {sorted(valid_statuses)}"}), 400
+            
+        due_date_value = data.get("due_date")
+        if due_date_value is not None:
+            if not isinstance(due_date_value, str):
+                return jsonify({"error": "due_date must be in YYYY-MM-DD format"}), 400
 
+            try:
+                due_date_value = date.fromisoformat(due_date_value)
+            except ValueError:
+                return jsonify({"error": "due_date must be a valid date in YYYY-MM-DD format"}), 400
+            
         task = Task(
             title=title.strip(),
             description=data.get("description"),
             status=status,
-            priority=priority
+            priority=priority,
+            due_date=due_date_value
         )
         db.session.add(task)
         db.session.commit()
@@ -128,6 +140,19 @@ def register_routes(app):
                 return jsonify({"error":"priority must be low, medium, or high"}), 400
             task.priority = data["priority"]
 
+        if "due_date" in data:
+            due_date_value = data["due_date"]
+
+            if due_date_value is None:
+                task.due_date = None
+            elif not isinstance(due_date_value, str):
+                return jsonify({"error": "due_date must be in YYYY-MM-DD format"}), 400
+            else:
+                try:
+                    task.due_date = date.fromisoformat(due_date_value)
+                except ValueError:
+                    return jsonify({"error": "due_date must be a valid date in YYYY-MM-DD format"}), 400
+
         db.session.commit()
         logger.info(f"Updated task {task.id}")
         return jsonify(task.to_dict()), 200
@@ -164,11 +189,3 @@ app = create_app()
 if __name__ == "__main__":
     app.run(debug=True)
 
-def test_create_task_with_priority(client):
-    response = client.post("/tasks", json={
-        "title": "Important task",
-        "priority": "high"
-    })
-
-    assert response.status_code == 201
-    assert response.get_json()["priority"] == "high"
