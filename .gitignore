@@ -1,0 +1,25 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Local databases
+instance/
+*.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor and system files
+.vscode/
+.DS_Store
+
+# Local backup files
+models_backup.py
